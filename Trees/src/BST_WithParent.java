@@ -4,7 +4,7 @@ import java.util.List;
 /**
  * A simple Binary Search Tree (BST) class.
  */
-public class BST {
+public class BST_WithParent {
 
     // A tree is just a root, really! Everything grows from here.
     private TreeNode root; // what's a TreeNode? See below.
@@ -14,10 +14,12 @@ public class BST {
         String value; // The data we store in this node
         TreeNode left; // left child
         TreeNode right; // right child
+        TreeNode parent; // !! parent node
         // basic constructor
         public TreeNode(String s) {
             this.value = s; // assigns content to String
             left = right = null; // makes pointers to children null
+            parent = null; // !! setting the parent to null as well
         } // constructor TreeNode
     } // class TreeNode
 
@@ -35,6 +37,7 @@ public class BST {
             TreeNode newNode = new TreeNode(s); // Node with new value to be inserted
             if (root == null) { // If tree is empty,
                 root = newNode; // new node becomes its root.
+                root.parent = null; // !! the root node has no parent
             } else { // Start our search from the root to find where to place new node.
                 TreeNode currentNode = root; // We start our search from the root.
                 boolean keepTrying = true; // Control variable from the principal loop, below.
@@ -42,6 +45,7 @@ public class BST {
                     if (s.compareTo(currentNode.value) > 0) { // New value is greater than current node; go RIGHT
                         if (currentNode.right == null) { // If right child is null
                             currentNode.right = newNode; // place new value here
+                            currentNode.right.parent = currentNode; // !! parent of the right child of the current node
                             keepTrying = false; // Flag to exit the principal loop.
                         } else { // Right child is not null
                             currentNode = currentNode.right; // Make right child the current node and try again.
@@ -49,6 +53,7 @@ public class BST {
                     } else { // New value is less than current node; go LEFT
                         if (currentNode.left == null) { // If left child is null
                             currentNode.left = newNode; // place new value here.
+                            currentNode.left.parent = currentNode; // !! parent of the left child of the current node
                             keepTrying = false; // Flag to exit the principal loop.
                         } else { // Left child is not null.
                             currentNode = currentNode.left; // Make left child the current node and try again.
@@ -113,7 +118,10 @@ public class BST {
                     currentNode = currentNode.left; // Go as left as you can
                 }
                 currentNode = nodesToProcess.get(0); // When no more left, print what's on top of the stack
-                System.out.printf("%-15s ",currentNode.value);
+                String v = (currentNode==root)? "("+currentNode.value+")" : currentNode.value;
+                String s = (successor(currentNode)==null)? "null" : successor(currentNode).value;
+                String o = v + " --> " + s;
+                System.out.printf("%-25s ",o);
                 if ( wordCount%wordPerLine==0 ) {
                     System.out.printf("\n");
                 }
@@ -174,11 +182,118 @@ public class BST {
         return succ;
     } // method successor
 
+    /**
+     * !! Method to find successor of a node, using parent pointers. The code is intentionally
+     * garrulous, to illustrate the search logic.
+     * @param ofThisNode Node whose successor we seek
+     * @return the node successor (can be null, if no successor is found).
+     */
+    public TreeNode successorP(TreeNode ofThisNode) {
+        TreeNode succ = null; // Assume that successor is null
+        if ( ofThisNode.right != null) { // If node has a right tree,
+            succ = minNode(ofThisNode.right); // its successor is smallest node of right subtree.
+        } else { // Node has no right child ...
+            if (ofThisNode.parent!=null); { // ... and if no parent either, then root w/o successor ...
+                boolean keepTrying = true; // ... otherwise, we'll loop from parent to parent.
+                TreeNode current = ofThisNode.parent;
+                if (current.parent != null) {
+                    if (current.parent.left == current) { // first parent we encounter that has a left child
+                        succ = current.parent; // is the successor we look for.
+                        keepTrying = false; // And we can end the loop.
+                    } else {
+                        current = current.parent;
+                    }
+                } else {
+                    keepTrying = false; // It's unlikely we'll ever need this (can you explain why?)
+                }
+            }
+        } // Done looking for the successor; we have it (or we end up with null, ie, end of tree).
+        return succ;
+    } // method successorP
+
+    public boolean deleteNode(TreeNode deleteMe) {
+        boolean success = false; // assume deletion fails
+        if (valueExists(deleteMe.value)) { // node exists, we can proceed
+            System.out.printf("\n\nAsked to delete %s", deleteMe.value);
+            // 0 children case
+            if (deleteMe.right ==  null && deleteMe.left == null) {
+                System.out.printf("\n\tNo children for this node");
+                if (deleteMe.parent == null) {
+                    System.out.printf("\n\tNo parent for this node");
+                    deleteMe = null;
+                } else {
+                    if (deleteMe.parent.right == deleteMe) {
+                        System.out.printf("\n\tSetting right child of parent to null");
+                        deleteMe.parent.right = null;
+                    } else {
+                        System.out.printf("\n\tSetting left child of parent to null");
+                        deleteMe.parent.left = null;
+                    }
+                }
+                System.out.printf("\n\tDone with 0 children case");
+                success = true;
+            }
+            // 1 child only: left
+            if (deleteMe.left != null && deleteMe.right == null) { // left child only
+                System.out.printf("\nDeleting node with left child only");
+                if (deleteMe.parent == null) { // no parent
+                    System.out.printf("\n\tNode has no parent");
+                    deleteMe.left.parent = null;
+                } else {
+                    if (deleteMe.parent.left == deleteMe) { // deleteMe is left child
+                        System.out.printf("\n\tNode is left child, and its left child is adopted by its parent as left child");
+                        deleteMe.parent.left = deleteMe.left;
+                    } else { // deleteMe is right child
+                        System.out.printf("\n\tNode is right child, and its left child is adopted by its parent as right child");
+                        deleteMe.parent.right = deleteMe.left;
+                    }
+                }
+                System.out.printf("\n\tDone with left child only case");
+                success = true;
+            }
+            // 1 child only: right
+            if (deleteMe.left == null && deleteMe.right != null) { // right child only
+                System.out.printf("\nDeleting node (%s) with right child only, (%s)", deleteMe.value, deleteMe.right.value);
+                if (deleteMe.parent == null) { //no parent
+                    System.out.printf("\n\tNode has no parent");
+                    deleteMe.right.parent = null;
+                } else {
+                    if (deleteMe.parent.left == deleteMe) {
+                        System.out.printf("\n\tNode is left child, and its right child is adopted by its parent (%s) as left child", deleteMe.parent.left.value);
+                        TreeNode p = deleteMe.parent.left;
+                        TreeNode r = deleteMe.right;
+                        deleteMe.parent.left = deleteMe.right;
+                        deleteMe.right.parent = deleteMe.parent.left;
+                    } else {
+                        System.out.printf("\n\tNode is right child and its right child is adopted by its parent (%s) as a right child", deleteMe.parent.right.value);
+                        deleteMe.parent.right = deleteMe.right;
+                        deleteMe.right = deleteMe.parent.right;
+                    }
+                }
+                System.out.printf("\n\tDone with right child only");
+                success = true;
+            }
+            // 2 children case
+            if (deleteMe.right!=null && deleteMe.left != null) {
+                System.out.printf("\nNode has two children: left: (%s) and right (%s)\n\tNode value is %s", deleteMe.left.value, deleteMe.right.value, deleteMe.value);
+                TreeNode s, t; // successor and temporary
+                s = successorP(deleteMe);
+                System.out.printf("\n\tNode's successor is %s", s.value);
+                deleteMe.value = s.value;
+            //   if (deleteMe==root) { root=deleteMe;}
+                System.out.printf("\n\tAfter swap, successor value is %s and deleteMe is %s", s.value, deleteMe.value);
+                System.out.printf("\n\tRecursing and deleting (%s)!", s.value);
+                deleteNode(s);
+            }
+        }
+        return success;
+    }
+
     /** Quick testing */
     public static void main (String[]args){
 
         // Instantiate a binary search tree.
-        BST sycamore = new BST();
+        BST_WithParent sycamore = new BST_WithParent();
 
         // Favorite soliloquy to be used as content for the tree
         String text = "Now is the winter of our discontent " +
@@ -196,6 +311,19 @@ public class BST {
 
         // Print the tree using the in-Order traversal
         sycamore.inOrder();
+
+        System.out.println();
+
+
+
+        sycamore.deleteNode(sycamore.root);
+        sycamore.inOrder();
+        System.out.println();
+        sycamore.deleteNode(sycamore.root);
+
+
+        sycamore.inOrder();
+
 
     } // method main
 
